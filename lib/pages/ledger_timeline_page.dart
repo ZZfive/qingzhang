@@ -8,7 +8,7 @@ import '../utils/ledger_formatters.dart';
 import '../utils/ledger_stats.dart';
 import '../widgets/category_avatar.dart';
 
-class LedgerTimelinePage extends StatelessWidget {
+class LedgerTimelinePage extends StatefulWidget {
   const LedgerTimelinePage({
     super.key,
     required this.entries,
@@ -33,8 +33,23 @@ class LedgerTimelinePage extends StatelessWidget {
   final VoidCallback onOpenSearch;
 
   @override
+  State<LedgerTimelinePage> createState() => _LedgerTimelinePageState();
+}
+
+class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
+  bool _showBalanceInTitle = false;
+
+  @override
+  void didUpdateWidget(covariant LedgerTimelinePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedBookName != widget.selectedBookName) {
+      _showBalanceInTitle = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final groups = groupEntriesByDay(entries);
+    final groups = groupEntriesByDay(widget.entries);
 
     return ColoredBox(
       color: Colors.white,
@@ -43,17 +58,20 @@ class LedgerTimelinePage extends StatelessWidget {
         child: Column(
           children: [
             TimelineHeader(
-              bookName: selectedBookName,
-              income: income,
-              expense: expense,
-              balance: balance,
-              onAdd: onAdd,
-              onOpenBooks: onOpenBooks,
-              onOpenSearch: onOpenSearch,
+              bookName: widget.selectedBookName,
+              income: widget.income,
+              expense: widget.expense,
+              balance: widget.balance,
+              showBalanceTitle: _showBalanceInTitle,
+              onToggleTitle: () =>
+                  setState(() => _showBalanceInTitle = !_showBalanceInTitle),
+              onAdd: widget.onAdd,
+              onOpenBooks: widget.onOpenBooks,
+              onOpenSearch: widget.onOpenSearch,
             ),
             Expanded(
               child: groups.isEmpty
-                  ? EmptyTimeline(onAdd: onAdd)
+                  ? EmptyTimeline(onAdd: widget.onAdd)
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
                       itemCount: groups.length,
@@ -62,7 +80,7 @@ class LedgerTimelinePage extends StatelessWidget {
                         return TimelineDaySection(
                           label: group.label,
                           entries: group.entries,
-                          onEditEntry: onEditEntry,
+                          onEditEntry: widget.onEditEntry,
                         );
                       },
                     ),
@@ -81,6 +99,8 @@ class TimelineHeader extends StatelessWidget {
     required this.income,
     required this.expense,
     required this.balance,
+    required this.showBalanceTitle,
+    required this.onToggleTitle,
     required this.onAdd,
     required this.onOpenBooks,
     required this.onOpenSearch,
@@ -90,13 +110,15 @@ class TimelineHeader extends StatelessWidget {
   final double income;
   final double expense;
   final double balance;
+  final bool showBalanceTitle;
+  final VoidCallback onToggleTitle;
   final VoidCallback onAdd;
   final VoidCallback onOpenBooks;
   final VoidCallback onOpenSearch;
 
   @override
   Widget build(BuildContext context) {
-    final balanceText = formatCurrency(balance);
+    final titleText = showBalanceTitle ? formatCurrency(balance) : bookName;
     return SizedBox(
       height: 258,
       child: Stack(
@@ -126,27 +148,30 @@ class TimelineHeader extends StatelessWidget {
                     onTap: onOpenBooks,
                   ),
                   const Spacer(),
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: .18),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: .38),
+                  GestureDetector(
+                    onTap: onToggleTitle,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
                       ),
-                    ),
-                    child: Text(
-                      balanceText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .18),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: .38),
+                        ),
+                      ),
+                      child: Text(
+                        titleText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),

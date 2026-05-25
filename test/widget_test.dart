@@ -9,7 +9,13 @@ void main() {
     ) async {
       await _pumpApp(tester);
 
+      expect(find.text('个人账本'), findsAtLeastNWidgets(1));
+      await tester.tap(find.text('个人账本').first);
+      await tester.pumpAndSettle();
       expect(find.text('¥14732'), findsAtLeastNWidgets(1));
+      await tester.tap(find.text('¥14732').first);
+      await tester.pumpAndSettle();
+      expect(find.text('个人账本'), findsAtLeastNWidgets(1));
       expect(find.text('当月收入'), findsOneWidget);
       expect(find.text('当月支出'), findsOneWidget);
       expect(find.byTooltip('账本'), findsOneWidget);
