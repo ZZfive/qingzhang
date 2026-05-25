@@ -55,7 +55,7 @@ class LedgerTimelinePage extends StatelessWidget {
               child: groups.isEmpty
                   ? EmptyTimeline(onAdd: onAdd)
                   : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
                       itemCount: groups.length,
                       itemBuilder: (context, index) {
                         final group = groups[index];
@@ -96,13 +96,14 @@ class TimelineHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final balanceText = formatCurrency(balance);
     return SizedBox(
-      height: 278,
+      height: 258,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            height: 174,
+            height: 156,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -113,7 +114,7 @@ class TimelineHeader extends StatelessWidget {
           ),
           Positioned.fill(
             top: 12,
-            bottom: 118,
+            bottom: 104,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Row(
@@ -125,30 +126,27 @@ class TimelineHeader extends StatelessWidget {
                     onTap: onOpenBooks,
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: onOpenBooks,
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 220),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 10,
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .18),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: .38),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .18),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .38),
-                        ),
-                      ),
-                      child: Text(
-                        bookName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    ),
+                    child: Text(
+                      balanceText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -166,22 +164,38 @@ class TimelineHeader extends StatelessWidget {
             left: 0,
             right: 0,
             top: 144,
-            child: Container(height: 134, color: Colors.white),
-          ),
-          Positioned(
-            left: 24,
-            top: 190,
-            child: SummaryAmount(label: '当月收入', amount: income),
-          ),
-          Positioned(
-            right: 24,
-            top: 190,
-            child: SummaryAmount(label: '当月支出', amount: expense),
+            child: Container(height: 114, color: Colors.white),
           ),
           Positioned(
             left: 0,
             right: 0,
-            top: 116,
+            top: 198,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 46),
+                    child: SummaryAmount(label: '当月收入', amount: income),
+                  ),
+                ),
+                const SizedBox(width: 126),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 46),
+                    child: SummaryAmount(
+                      label: '当月支出',
+                      amount: expense,
+                      alignRight: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 106,
             child: Center(
               child: AddCircleButton(balance: balance, onTap: onAdd),
             ),
@@ -213,7 +227,7 @@ class HeaderIconButton extends StatelessWidget {
       style: IconButton.styleFrom(
         foregroundColor: Colors.white,
         backgroundColor: Colors.white.withValues(alpha: .16),
-        fixedSize: const Size.square(54),
+        fixedSize: const Size.square(48),
       ),
     );
   }
@@ -239,16 +253,16 @@ class AddCircleButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: Container(
-          width: 132,
-          height: 132,
+          width: 112,
+          height: 112,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFE1AE28), width: 9),
+            border: Border.all(color: const Color(0xFFE1AE28), width: 7),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.add, size: 46, color: Color(0xFFE1AE28)),
+              const Icon(Icons.add, size: 38, color: Color(0xFFE1AE28)),
               const SizedBox(height: 4),
               Text(
                 formatCurrency(balance),
@@ -263,30 +277,35 @@ class AddCircleButton extends StatelessWidget {
 }
 
 class SummaryAmount extends StatelessWidget {
-  const SummaryAmount({super.key, required this.label, required this.amount});
+  const SummaryAmount({
+    super.key,
+    required this.label,
+    required this.amount,
+    this.alignRight = false,
+  });
 
   final String label;
   final double amount;
+  final bool alignRight;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 128,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AppText.muted(context).copyWith(fontSize: 20)),
-          const SizedBox(height: 6),
-          Text(
-            formatCurrency(amount).replaceFirst('¥', ''),
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 20,
-              fontWeight: FontWeight.w400,
-            ),
+    return Column(
+      crossAxisAlignment: alignRight
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppText.muted(context).copyWith(fontSize: 16)),
+        const SizedBox(height: 4),
+        Text(
+          formatCurrency(amount).replaceFirst('¥', ''),
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -336,49 +355,57 @@ class TimelineDayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: Row(
-        children: [
-          const Expanded(child: SizedBox()),
-          SizedBox(
-            width: 96,
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label.replaceFirst('今天 ', ''),
-                    style: AppText.muted(context),
-                  ),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: const BoxDecoration(
-                      color: AppColors.line,
-                      shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: SizedBox(
+        height: 38,
+        child: Row(
+          children: [
+            Expanded(
+              child: income > 0
+                  ? Text(
+                      '+${formatCurrency(income)}',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: AppColors.income,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    )
+                  : const SizedBox(),
+            ),
+            SizedBox(
+              width: 108,
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label.replaceFirst('今天 ', ''),
+                      style: AppText.muted(context).copyWith(fontSize: 14),
                     ),
-                  ),
-                ],
+                    Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: const BoxDecoration(
+                        color: AppColors.line,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: Text(
-              expense > 0 ? formatCurrency(expense).replaceFirst('¥', '') : '',
-              style: AppText.muted(context),
-            ),
-          ),
-          if (income > 0)
-            Text(
-              '+${formatCurrency(income)}',
-              style: const TextStyle(
-                color: AppColors.income,
-                fontWeight: FontWeight.w800,
+            Expanded(
+              child: Text(
+                expense > 0
+                    ? formatCurrency(expense).replaceFirst('¥', '')
+                    : '',
+                style: AppText.muted(context).copyWith(fontSize: 14),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -401,16 +428,19 @@ class TimelineEntryRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 86),
+        constraints: const BoxConstraints(minHeight: 74),
         child: Row(
           children: [
             Expanded(
-              child: isIncome
-                  ? _EntryTitle(entry: entry, alignRight: true)
-                  : const SizedBox(),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 22),
+                child: isIncome
+                    ? _EntryTitle(entry: entry, alignRight: true)
+                    : const SizedBox(),
+              ),
             ),
             SizedBox(
-              width: 96,
+              width: 86,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -420,15 +450,18 @@ class TimelineEntryRow extends StatelessWidget {
                     ),
                   ),
                   CircleAvatar(
-                    radius: 24,
+                    radius: 21,
                     backgroundColor: color,
-                    child: Icon(icon, color: Colors.white, size: 24),
+                    child: Icon(icon, color: Colors.white, size: 21),
                   ),
                 ],
               ),
             ),
             Expanded(
-              child: isIncome ? const SizedBox() : _EntryTitle(entry: entry),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 22),
+                child: isIncome ? const SizedBox() : _EntryTitle(entry: entry),
+              ),
             ),
           ],
         ),
@@ -459,7 +492,7 @@ class _EntryTitle extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.muted,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -468,7 +501,7 @@ class _EntryTitle extends StatelessWidget {
             entry.note,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppText.muted(context).copyWith(fontSize: 12),
+            style: AppText.muted(context).copyWith(fontSize: 11),
           ),
       ],
     );

@@ -30,17 +30,28 @@ class _AppShellState extends State<AppShell> {
     LedgerBook(id: 'travel', name: '旅行账本', description: '出行预算和结算'),
   ].toList();
   final List<String> _expenseCategories = [
-    '餐饮',
+    '给父母',
+    '一般',
+    '用餐',
     '交通',
-    '购物',
-    '居住',
+    '服饰',
+    '丽人',
+    '日用品',
     '娱乐',
-    '水果',
+    '食材',
     '零食',
-    '医疗',
+    '酒水',
+    '住房',
+    '健身',
+    '通讯',
+    '人情',
     '学习',
-    '住宿',
-    '其他',
+    '医疗',
+    '旅游',
+    '数码',
+    '红包',
+    '快递物流',
+    '水果',
   ];
   final List<String> _incomeCategories = [
     '工资',
@@ -75,16 +86,16 @@ class _AppShellState extends State<AppShell> {
   double get _balance => _income - _expense;
 
   Future<void> _openEntrySheet([LedgerEntry? editingEntry]) async {
-    final entry = await showModalBottomSheet<LedgerEntry>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => EntrySheet(
-        books: _books,
-        selectedBookId: _selectedBookId,
-        expenseCategories: _expenseCategories,
-        incomeCategories: _incomeCategories,
-        entry: editingEntry,
+    final entry = await Navigator.of(context).push<LedgerEntry>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => EntrySheet(
+          books: _books,
+          selectedBookId: _selectedBookId,
+          expenseCategories: _expenseCategories,
+          incomeCategories: _incomeCategories,
+          entry: editingEntry,
+        ),
       ),
     );
 
@@ -116,18 +127,22 @@ class _AppShellState extends State<AppShell> {
     ).push(MaterialPageRoute(builder: (_) => const ExportBackupPage()));
   }
 
-  void _openBooksPage() {
-    Navigator.of(context).push(
+  Future<void> _openBooksPage() async {
+    final result = await Navigator.of(context).push<LedgerBooksResult>(
       MaterialPageRoute(
-        builder: (_) => LedgerBooksPage(
-          books: _books,
-          selectedBookId: _selectedBookId,
-          onSelectBook: _selectBook,
-          onAddBook: _addBook,
-          onDeleteBook: _deleteBook,
-        ),
+        builder: (_) =>
+            LedgerBooksPage(books: _books, selectedBookId: _selectedBookId),
       ),
     );
+    if (result == null) return;
+    switch (result) {
+      case SelectLedgerBookResult(:final bookId):
+        _selectBook(bookId);
+      case AddLedgerBookResult(:final name):
+        _addBook(name);
+      case DeleteLedgerBookResult(:final bookId):
+        _deleteBook(bookId);
+    }
   }
 
   void _selectBook(String bookId) {

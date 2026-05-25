@@ -9,7 +9,7 @@ void main() {
     ) async {
       await _pumpApp(tester);
 
-      expect(find.text('个人账本'), findsAtLeastNWidgets(1));
+      expect(find.text('¥14732'), findsAtLeastNWidgets(1));
       expect(find.text('当月收入'), findsOneWidget);
       expect(find.text('当月支出'), findsOneWidget);
       expect(find.byTooltip('账本'), findsOneWidget);
@@ -24,6 +24,16 @@ void main() {
       expect(find.text('账本'), findsOneWidget);
       expect(find.text('新建账本'), findsOneWidget);
       expect(find.text('旅行账本'), findsOneWidget);
+
+      await tester.tap(find.text('新建账本'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '工作后的账本');
+      await tester.tap(find.text('保存'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('账本'));
+      await tester.pumpAndSettle();
+      expect(find.text('工作后的账本'), findsAtLeastNWidgets(1));
 
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -47,15 +57,17 @@ void main() {
       await tester.tap(find.byIcon(Icons.add).first);
       await tester.pumpAndSettle();
 
-      expect(find.text('账目设置'), findsOneWidget);
-      expect(find.text('取消'), findsOneWidget);
+      expect(find.byTooltip('取消'), findsOneWidget);
       expect(find.text('支出'), findsOneWidget);
+      expect(find.text('给父母'), findsAtLeastNWidgets(1));
 
-      await tester.enterText(find.byType(TextField).at(0), '88');
+      await tester.tap(find.text('8').last);
+      await tester.tap(find.text('8').last);
       await tester.pumpAndSettle();
-      await _ensureVisibleAndTap(tester, '保存');
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
 
-      expect(find.textContaining('餐饮 88'), findsOneWidget);
+      expect(find.textContaining('给父母 88'), findsOneWidget);
     });
 
     testWidgets('opens an existing entry for editing from the timeline', (
@@ -66,8 +78,9 @@ void main() {
       await tester.tap(find.textContaining('餐饮 38').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('修改账目'), findsOneWidget);
-      expect(find.text('取消'), findsOneWidget);
+      expect(find.byTooltip('取消'), findsOneWidget);
+      expect(find.text('餐饮'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('38'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('filters transactions from the search tab', (tester) async {
@@ -143,6 +156,10 @@ void main() {
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(const AccountingApp());
   await tester.pumpAndSettle();
 }

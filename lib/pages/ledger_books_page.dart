@@ -7,21 +7,37 @@ import '../widgets/app_card.dart';
 import '../widgets/flow_page.dart';
 import '../widgets/section_title.dart';
 
+sealed class LedgerBooksResult {
+  const LedgerBooksResult();
+}
+
+class SelectLedgerBookResult extends LedgerBooksResult {
+  const SelectLedgerBookResult(this.bookId);
+
+  final String bookId;
+}
+
+class AddLedgerBookResult extends LedgerBooksResult {
+  const AddLedgerBookResult(this.name);
+
+  final String name;
+}
+
+class DeleteLedgerBookResult extends LedgerBooksResult {
+  const DeleteLedgerBookResult(this.bookId);
+
+  final String bookId;
+}
+
 class LedgerBooksPage extends StatelessWidget {
   const LedgerBooksPage({
     super.key,
     required this.books,
     required this.selectedBookId,
-    required this.onSelectBook,
-    required this.onAddBook,
-    required this.onDeleteBook,
   });
 
   final List<LedgerBook> books;
   final String selectedBookId;
-  final ValueChanged<String> onSelectBook;
-  final ValueChanged<String> onAddBook;
-  final ValueChanged<String> onDeleteBook;
 
   @override
   Widget build(BuildContext context) {
@@ -43,10 +59,9 @@ class LedgerBooksPage extends StatelessWidget {
                     book: book,
                     selected: book.id == selectedBookId,
                     canDelete: books.length > 1,
-                    onSelect: () {
-                      onSelectBook(book.id);
-                      Navigator.of(context).pop();
-                    },
+                    onSelect: () => Navigator.of(
+                      context,
+                    ).pop(SelectLedgerBookResult(book.id)),
                     onDelete: () => _confirmDelete(context, book),
                   ),
               ],
@@ -67,53 +82,53 @@ class LedgerBooksPage extends StatelessWidget {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('新建账本'),
         content: TextField(
           controller: controller,
           autofocus: true,
           decoration: const InputDecoration(hintText: '例如 工作后的账本'),
           textInputAction: TextInputAction.done,
-          onSubmitted: (value) => Navigator.of(context).pop(value),
+          onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
             child: const Text('保存'),
           ),
         ],
       ),
     );
-    controller.dispose();
-    if (name != null && name.trim().isNotEmpty) {
-      onAddBook(name);
-      if (context.mounted) Navigator.of(context).pop();
+    if (name != null && name.trim().isNotEmpty && context.mounted) {
+      Navigator.of(context).pop(AddLedgerBookResult(name.trim()));
     }
   }
 
   Future<void> _confirmDelete(BuildContext context, LedgerBook book) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text('删除${book.name}？'),
         content: const Text('这个账本下的当前内存流水也会一起移除。接入本地数据库后会改成可恢复备份。'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('删除'),
           ),
         ],
       ),
     );
-    if (confirmed == true) onDeleteBook(book.id);
+    if (confirmed == true && context.mounted) {
+      Navigator.of(context).pop(DeleteLedgerBookResult(book.id));
+    }
   }
 }
 
