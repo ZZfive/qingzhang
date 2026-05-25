@@ -24,11 +24,16 @@ List<DayGroup> groupEntriesByDay(List<LedgerEntry> entries) {
 }
 
 List<MapEntry<String, double>> categoryTotals(List<LedgerEntry> entries) {
+  return categoryTotalsByType(entries, EntryType.expense);
+}
+
+List<MapEntry<String, double>> categoryTotalsByType(
+  List<LedgerEntry> entries,
+  EntryType type,
+) {
   final totals = <String, double>{};
 
-  for (final entry in entries.where(
-    (entry) => entry.type == EntryType.expense,
-  )) {
+  for (final entry in entries.where((entry) => entry.type == type)) {
     totals.update(
       entry.category,
       (amount) => amount + entry.amount,
@@ -40,10 +45,15 @@ List<MapEntry<String, double>> categoryTotals(List<LedgerEntry> entries) {
 }
 
 int countExpenseEntries(List<LedgerEntry> entries, String category) {
+  return countEntriesByType(entries, category, EntryType.expense);
+}
+
+int countEntriesByType(
+  List<LedgerEntry> entries,
+  String category,
+  EntryType type,
+) {
   return entries
-      .where(
-        (entry) =>
-            entry.type == EntryType.expense && entry.category == category,
-      )
+      .where((entry) => entry.type == type && entry.category == category)
       .length;
 }

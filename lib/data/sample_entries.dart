@@ -4,6 +4,7 @@ import '../models/ledger_entry.dart';
 List<LedgerEntry> sampleEntries() {
   return [
     LedgerEntry(
+      bookId: 'personal',
       title: '午餐',
       category: '餐饮',
       amount: 38,
@@ -12,6 +13,7 @@ List<LedgerEntry> sampleEntries() {
       note: '公司楼下',
     ),
     LedgerEntry(
+      bookId: 'personal',
       title: '地铁',
       category: '交通',
       amount: 6,
@@ -20,6 +22,7 @@ List<LedgerEntry> sampleEntries() {
       note: '通勤',
     ),
     LedgerEntry(
+      bookId: 'personal',
       title: '咖啡',
       category: '餐饮',
       amount: 24,
@@ -28,6 +31,7 @@ List<LedgerEntry> sampleEntries() {
       note: '备注联想',
     ),
     LedgerEntry(
+      bookId: 'personal',
       title: '工资',
       category: '工资',
       amount: 18000,
@@ -36,12 +40,23 @@ List<LedgerEntry> sampleEntries() {
       account: '银行卡',
     ),
     LedgerEntry(
+      bookId: 'personal',
       title: '房租',
       category: '居住',
       amount: 3200,
       type: EntryType.expense,
       date: DateTime(2026, 5, 13, 18),
       note: '周期账单',
+    ),
+    LedgerEntry(
+      bookId: 'travel',
+      title: '酒店',
+      category: '住宿',
+      amount: 520,
+      type: EntryType.expense,
+      date: DateTime(2026, 5, 12, 21),
+      account: '银行卡',
+      note: '周末短途',
     ),
   ];
 }

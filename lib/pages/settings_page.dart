@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/entry_type.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
 import '../widgets/app_card.dart';
@@ -9,10 +10,16 @@ import '../widgets/section_title.dart';
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
+    required this.expenseCategories,
+    required this.incomeCategories,
+    required this.onAddCategory,
     required this.onOpenImport,
     required this.onOpenExport,
   });
 
+  final List<String> expenseCategories;
+  final List<String> incomeCategories;
+  final void Function(EntryType type, String category) onAddCategory;
   final VoidCallback onOpenImport;
   final VoidCallback onOpenExport;
 
@@ -24,6 +31,18 @@ class SettingsPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
         children: [
+          CategorySettingsCard(
+            title: '支出分类',
+            categories: expenseCategories,
+            onAdd: () => _showAddCategoryDialog(context, EntryType.expense),
+          ),
+          const SizedBox(height: 16),
+          CategorySettingsCard(
+            title: '收入分类',
+            categories: incomeCategories,
+            onAdd: () => _showAddCategoryDialog(context, EntryType.income),
+          ),
+          const SizedBox(height: 16),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,6 +97,86 @@ class SettingsPage extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddCategoryDialog(
+    BuildContext context,
+    EntryType type,
+  ) async {
+    final controller = TextEditingController();
+    final title = type == EntryType.income ? '新增收入分类' : '新增支出分类';
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '输入分类名称'),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (value) => Navigator.of(context).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name != null) onAddCategory(type, name);
+  }
+}
+
+class CategorySettingsCard extends StatelessWidget {
+  const CategorySettingsCard({
+    super.key,
+    required this.title,
+    required this.categories,
+    required this.onAdd,
+  });
+
+  final String title;
+  final List<String> categories;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: SectionTitle(title)),
+              IconButton(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add_circle_outline),
+                tooltip: '新增分类',
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final category in categories)
+                Chip(
+                  label: Text(category),
+                  backgroundColor: AppColors.primarySoft,
+                  side: BorderSide.none,
+                ),
+            ],
           ),
         ],
       ),

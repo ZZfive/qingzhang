@@ -109,6 +109,7 @@ class ImportPreviewPage extends StatelessWidget {
               children: [
                 LedgerEntryTile(
                   entry: LedgerEntry(
+                    bookId: 'personal',
                     title: '午餐',
                     category: 'Timi · 餐饮',
                     amount: 38,
@@ -118,6 +119,7 @@ class ImportPreviewPage extends StatelessWidget {
                 ),
                 LedgerEntryTile(
                   entry: LedgerEntry(
+                    bookId: 'personal',
                     title: '工资',
                     category: 'Timi · 工资',
                     amount: 18000,

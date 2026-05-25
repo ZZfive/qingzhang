@@ -9,18 +9,33 @@ void main() {
     ) async {
       await _pumpApp(tester);
 
-      expect(find.text('清账'), findsOneWidget);
-      expect(find.text('无广告，本地优先，打开就能记'), findsOneWidget);
-      expect(find.text('5月结余'), findsOneWidget);
+      expect(find.text('个人账本'), findsAtLeastNWidgets(1));
+      expect(find.text('当月收入'), findsOneWidget);
+      expect(find.text('当月支出'), findsOneWidget);
+      expect(find.byTooltip('账本'), findsOneWidget);
       expect(find.text('流水'), findsOneWidget);
       expect(find.text('统计'), findsOneWidget);
       expect(find.text('搜索'), findsAtLeastNWidgets(1));
       expect(find.text('设置'), findsOneWidget);
 
+      await tester.tap(find.byTooltip('账本'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('账本'), findsOneWidget);
+      expect(find.text('新建账本'), findsOneWidget);
+      expect(find.text('旅行账本'), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await _tapNavLabel(tester, '设置');
 
+      expect(find.text('支出分类'), findsOneWidget);
+      await _ensureVisible(tester, '收入分类');
+      expect(find.text('收入分类'), findsOneWidget);
       expect(find.text('数据与备份'), findsOneWidget);
+      await _ensureVisible(tester, '导入 Timi 记账数据');
       expect(find.text('导入 Timi 记账数据'), findsOneWidget);
+      await _ensureVisible(tester, '导出 / 备份');
       expect(find.text('导出 / 备份'), findsOneWidget);
     });
 
@@ -29,22 +44,30 @@ void main() {
     ) async {
       await _pumpApp(tester);
 
-      await tester.tap(find.byType(FloatingActionButton));
+      await tester.tap(find.byIcon(Icons.add).first);
       await tester.pumpAndSettle();
 
-      expect(find.text('记一笔'), findsOneWidget);
+      expect(find.text('账目设置'), findsOneWidget);
+      expect(find.text('取消'), findsOneWidget);
       expect(find.text('支出'), findsOneWidget);
-      expect(find.text('保存并再记一笔'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextFormField).at(0), '88');
-      await tester.enterText(find.byType(TextFormField).at(1), '测试早餐');
-      await tester.enterText(find.byType(TextFormField).at(2), '测试备注');
-      await tester.tap(find.text('保存'));
+      await tester.enterText(find.byType(TextField).at(0), '88');
+      await tester.pumpAndSettle();
+      await _ensureVisibleAndTap(tester, '保存');
+
+      expect(find.textContaining('餐饮 88'), findsOneWidget);
+    });
+
+    testWidgets('opens an existing entry for editing from the timeline', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      await tester.tap(find.textContaining('餐饮 38').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('测试早餐'), findsOneWidget);
-      expect(find.textContaining('测试备注'), findsOneWidget);
-      expect(find.text('-¥88'), findsOneWidget);
+      expect(find.text('修改账目'), findsOneWidget);
+      expect(find.text('取消'), findsOneWidget);
     });
 
     testWidgets('filters transactions from the search tab', (tester) async {
@@ -74,8 +97,7 @@ void main() {
       await _pumpApp(tester);
 
       await _tapNavLabel(tester, '设置');
-      await tester.tap(find.text('导入 Timi 记账数据'));
-      await tester.pumpAndSettle();
+      await _ensureVisibleAndTap(tester, '导入 Timi 记账数据');
 
       expect(find.text('导入数据'), findsOneWidget);
       expect(find.text('Timi 记账'), findsOneWidget);
@@ -107,8 +129,7 @@ void main() {
       await _pumpApp(tester);
 
       await _tapNavLabel(tester, '设置');
-      await tester.tap(find.text('导出 / 备份'));
-      await tester.pumpAndSettle();
+      await _ensureVisibleAndTap(tester, '导出 / 备份');
 
       expect(find.text('导出与备份'), findsOneWidget);
       expect(find.text('完整导出，不锁数据'), findsOneWidget);
@@ -133,19 +154,24 @@ Future<void> _tapNavLabel(WidgetTester tester, String label) async {
 
 Future<void> _ensureVisibleAndTap(WidgetTester tester, String label) async {
   await _ensureVisible(tester, label);
-  await tester.tap(find.text(label));
+  await tester.tap(find.text(label).first);
   await tester.pumpAndSettle();
 }
 
 Future<void> _ensureVisible(WidgetTester tester, String label) async {
   final finder = find.text(label);
+  final verticalScrollable = find.byWidgetPredicate((widget) {
+    return widget is Scrollable &&
+        (widget.axisDirection == AxisDirection.down ||
+            widget.axisDirection == AxisDirection.up);
+  });
   if (finder.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
       finder,
       240,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: verticalScrollable.last,
     );
   }
-  await tester.ensureVisible(finder);
+  await tester.ensureVisible(finder.first);
   await tester.pumpAndSettle();
 }

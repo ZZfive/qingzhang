@@ -2,6 +2,7 @@ import 'entry_type.dart';
 
 class LedgerEntry {
   const LedgerEntry({
+    required this.bookId,
     required this.title,
     required this.category,
     required this.amount,
@@ -12,6 +13,7 @@ class LedgerEntry {
     this.source,
   });
 
+  final String bookId;
   final String title;
   final String category;
   final double amount;
