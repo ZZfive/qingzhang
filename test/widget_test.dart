@@ -112,6 +112,32 @@ void main() {
       expect(find.textContaining('共 0 笔'), findsOneWidget);
     });
 
+    testWidgets('opens statistics as a full-screen route and returns', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      await _tapNavLabel(tester, '统计');
+
+      expect(find.text('全部收支汇总'), findsOneWidget);
+      expect(find.text('流水'), findsNothing);
+      expect(find.text('设置'), findsNothing);
+      expect(find.text('汇总'), findsOneWidget);
+      expect(find.text('支出'), findsOneWidget);
+      expect(find.text('收入'), findsOneWidget);
+
+      await tester.tap(find.text('收入').last);
+      await tester.pumpAndSettle();
+      expect(find.text('我的收入及财务状况'), findsAtLeastNWidgets(1));
+
+      await tester.tap(find.byTooltip('关闭'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('流水'), findsOneWidget);
+      expect(find.text('统计'), findsOneWidget);
+      expect(find.text('设置'), findsOneWidget);
+    });
+
     testWidgets('walks through the Timi import flow without a device', (
       tester,
     ) async {

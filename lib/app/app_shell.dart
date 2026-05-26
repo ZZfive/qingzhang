@@ -194,7 +194,6 @@ class _AppShellState extends State<AppShell> {
         onOpenBooks: _openBooksPage,
         onOpenSearch: _openSearchPage,
       ),
-      StatisticsPage(entries: _visibleEntries, bookName: _selectedBook.name),
       SettingsPage(
         expenseCategories: _expenseCategories,
         incomeCategories: _incomeCategories,
@@ -207,9 +206,14 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
+        selectedIndex: _selectedIndex == 1 ? 2 : 0,
+        onDestinationSelected: (index) {
+          if (index == 1) {
+            _openStatisticsPage();
+            return;
+          }
+          setState(() => _selectedIndex = index == 2 ? 1 : 0);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
@@ -234,6 +238,17 @@ class _AppShellState extends State<AppShell> {
   void _openSearchPage() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => SearchPage(entries: _visibleEntries)),
+    );
+  }
+
+  void _openStatisticsPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StatisticsPage(
+          entries: _visibleEntries,
+          bookName: _selectedBook.name,
+        ),
+      ),
     );
   }
 }
