@@ -192,10 +192,9 @@ class _AppShellState extends State<AppShell> {
         onAdd: _openEntrySheet,
         onEditEntry: _openEntrySheet,
         onOpenBooks: _openBooksPage,
-        onOpenSearch: () => setState(() => _selectedIndex = 2),
+        onOpenSearch: _openSearchPage,
       ),
       StatisticsPage(entries: _visibleEntries, bookName: _selectedBook.name),
-      SearchPage(entries: _visibleEntries),
       SettingsPage(
         expenseCategories: _expenseCategories,
         incomeCategories: _incomeCategories,
@@ -223,17 +222,18 @@ class _AppShellState extends State<AppShell> {
             label: '统计',
           ),
           NavigationDestination(
-            icon: Icon(Icons.search),
-            selectedIcon: Icon(Icons.manage_search),
-            label: '搜索',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: '设置',
           ),
         ],
       ),
+    );
+  }
+
+  void _openSearchPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => SearchPage(entries: _visibleEntries)),
     );
   }
 }

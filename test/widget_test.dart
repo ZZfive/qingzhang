@@ -21,7 +21,8 @@ void main() {
       expect(find.byTooltip('账本'), findsOneWidget);
       expect(find.text('流水'), findsOneWidget);
       expect(find.text('统计'), findsOneWidget);
-      expect(find.text('搜索'), findsAtLeastNWidgets(1));
+      expect(find.text('搜索'), findsNothing);
+      expect(find.byTooltip('搜索'), findsOneWidget);
       expect(find.text('设置'), findsOneWidget);
 
       await tester.tap(find.byTooltip('账本'));
@@ -92,7 +93,8 @@ void main() {
     testWidgets('filters transactions from the search tab', (tester) async {
       await _pumpApp(tester);
 
-      await _tapNavLabel(tester, '搜索');
+      await tester.tap(find.byTooltip('搜索'));
+      await tester.pumpAndSettle();
 
       expect(find.text('按金额、分类、时间和备注查账'), findsOneWidget);
       expect(find.text('搜索结果'), findsOneWidget);

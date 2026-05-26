@@ -86,12 +86,6 @@ class _SearchPageState extends State<SearchPage> {
                 onSelected: (_) =>
                     setState(() => _typeFilter = EntryType.income),
               ),
-              FilterChip(
-                label: const Text('转账'),
-                selected: _typeFilter == EntryType.transfer,
-                onSelected: (_) =>
-                    setState(() => _typeFilter = EntryType.transfer),
-              ),
             ],
           ),
           const SizedBox(height: 16),
