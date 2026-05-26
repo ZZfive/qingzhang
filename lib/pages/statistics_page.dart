@@ -180,17 +180,28 @@ class StatsHeader extends StatelessWidget {
         border: Border(bottom: BorderSide(color: AppColors.subtle)),
       ),
       child: Stack(
-        alignment: Alignment.center,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 64),
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
           Positioned(
-            left: 8,
+            left: 4,
+            top: 0,
             child: IconButton(
               onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close, size: 30),
+              icon: const Icon(Icons.close, size: 24),
               color: AppColors.muted,
               tooltip: '关闭',
             ),
