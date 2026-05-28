@@ -95,20 +95,9 @@ class _AppShellState extends State<AppShell> {
   double get _balance => _income - _expense;
 
   Future<void> _openEntrySheet([LedgerEntry? editingEntry]) async {
-    final entry = await Navigator.of(context).push<LedgerEntry>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => EntrySheet(
-          books: _books,
-          selectedBookId: _selectedBookId,
-          expenseCategories: _expenseCategories,
-          incomeCategories: _incomeCategories,
-          expenseCategoryIcons: _expenseCategoryIcons,
-          incomeCategoryIcons: _incomeCategoryIcons,
-          entry: editingEntry,
-        ),
-      ),
-    );
+    final entry = await Navigator.of(
+      context,
+    ).push<LedgerEntry>(_entrySheetRoute(editingEntry));
 
     if (entry != null) {
       setState(() {
@@ -124,6 +113,36 @@ class _AppShellState extends State<AppShell> {
         }
       });
     }
+  }
+
+  PageRouteBuilder<LedgerEntry> _entrySheetRoute(LedgerEntry? editingEntry) {
+    return PageRouteBuilder<LedgerEntry>(
+      transitionDuration: const Duration(milliseconds: 260),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (context, animation, secondaryAnimation) => EntrySheet(
+        books: _books,
+        selectedBookId: _selectedBookId,
+        expenseCategories: _expenseCategories,
+        incomeCategories: _incomeCategories,
+        expenseCategoryIcons: _expenseCategoryIcons,
+        incomeCategoryIcons: _incomeCategoryIcons,
+        entry: editingEntry,
+      ),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, -1),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        );
+      },
+    );
   }
 
   void _openImportFlow() {

@@ -39,6 +39,7 @@ class LedgerTimelinePage extends StatefulWidget {
 
 class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
   bool _showBalanceInTitle = false;
+  RefreshIndicatorStatus? _pullStatus;
 
   @override
   void didUpdateWidget(covariant LedgerTimelinePage oldWidget) {
@@ -63,6 +64,7 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               income: widget.income,
               expense: widget.expense,
               balance: widget.balance,
+              pullStatus: _pullStatus,
               showBalanceTitle: _showBalanceInTitle,
               onToggleTitle: () =>
                   setState(() => _showBalanceInTitle = !_showBalanceInTitle),
@@ -71,11 +73,11 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               onOpenSearch: widget.onOpenSearch,
             ),
             Expanded(
-              child: RefreshIndicator(
-                color: const Color(0xFFE1AE28),
-                backgroundColor: Colors.white,
-                displacement: 24,
+              child: RefreshIndicator.noSpinner(
                 onRefresh: _openAddFromPull,
+                onStatusChange: (status) {
+                  setState(() => _pullStatus = status);
+                },
                 child: groups.isEmpty
                     ? EmptyTimeline(onAdd: widget.onAdd)
                     : ListView.builder(
@@ -112,6 +114,7 @@ class TimelineHeader extends StatelessWidget {
     required this.income,
     required this.expense,
     required this.balance,
+    required this.pullStatus,
     required this.showBalanceTitle,
     required this.onToggleTitle,
     required this.onAdd,
@@ -123,6 +126,7 @@ class TimelineHeader extends StatelessWidget {
   final double income;
   final double expense;
   final double balance;
+  final RefreshIndicatorStatus? pullStatus;
   final bool showBalanceTitle;
   final VoidCallback onToggleTitle;
   final VoidCallback onAdd;
@@ -235,7 +239,7 @@ class TimelineHeader extends StatelessWidget {
             right: 0,
             top: 106,
             child: Center(
-              child: AddCircleButton(balance: balance, onTap: onAdd),
+              child: AddCircleButton(onTap: onAdd, pullStatus: pullStatus),
             ),
           ),
         ],
@@ -271,15 +275,56 @@ class HeaderIconButton extends StatelessWidget {
   }
 }
 
-class AddCircleButton extends StatelessWidget {
+class AddCircleButton extends StatefulWidget {
   const AddCircleButton({
     super.key,
-    required this.balance,
     required this.onTap,
+    required this.pullStatus,
   });
 
-  final double balance;
   final VoidCallback onTap;
+  final RefreshIndicatorStatus? pullStatus;
+
+  @override
+  State<AddCircleButton> createState() => _AddCircleButtonState();
+}
+
+class _AddCircleButtonState extends State<AddCircleButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  bool get _shouldRotate {
+    return widget.pullStatus != null &&
+        widget.pullStatus != RefreshIndicatorStatus.done &&
+        widget.pullStatus != RefreshIndicatorStatus.canceled;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 760),
+    );
+    if (_shouldRotate) _controller.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant AddCircleButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_shouldRotate && !_controller.isAnimating) {
+      _controller.repeat();
+    } else if (!_shouldRotate && _controller.isAnimating) {
+      _controller.stop();
+      _controller.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +334,7 @@ class AddCircleButton extends StatelessWidget {
       elevation: 8,
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Container(
           width: 112,
           height: 112,
@@ -297,16 +342,11 @@ class AddCircleButton extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: const Color(0xFFE1AE28), width: 7),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.add, size: 38, color: Color(0xFFE1AE28)),
-              const SizedBox(height: 4),
-              Text(
-                formatCurrency(balance),
-                style: AppText.muted(context).copyWith(fontSize: 12),
-              ),
-            ],
+          child: Center(
+            child: RotationTransition(
+              turns: _controller,
+              child: const Icon(Icons.add, size: 44, color: Color(0xFFE1AE28)),
+            ),
           ),
         ),
       ),
