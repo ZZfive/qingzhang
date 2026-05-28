@@ -40,6 +40,7 @@ class LedgerTimelinePage extends StatefulWidget {
 class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
   bool _showBalanceInTitle = false;
   RefreshIndicatorStatus? _pullStatus;
+  bool _isPullingDown = false;
 
   @override
   void didUpdateWidget(covariant LedgerTimelinePage oldWidget) {
@@ -65,6 +66,7 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               expense: widget.expense,
               balance: widget.balance,
               pullStatus: _pullStatus,
+              isPullingDown: _isPullingDown,
               showBalanceTitle: _showBalanceInTitle,
               onToggleTitle: () =>
                   setState(() => _showBalanceInTitle = !_showBalanceInTitle),
@@ -73,32 +75,64 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               onOpenSearch: widget.onOpenSearch,
             ),
             Expanded(
-              child: RefreshIndicator.noSpinner(
-                onRefresh: _openAddFromPull,
-                onStatusChange: (status) {
-                  setState(() => _pullStatus = status);
-                },
-                child: groups.isEmpty
-                    ? EmptyTimeline(onAdd: widget.onAdd)
-                    : ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
-                        itemCount: groups.length,
-                        itemBuilder: (context, index) {
-                          final group = groups[index];
-                          return TimelineDaySection(
-                            label: group.label,
-                            entries: group.entries,
-                            onEditEntry: widget.onEditEntry,
-                          );
-                        },
-                      ),
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _handleTimelineScroll,
+                child: RefreshIndicator.noSpinner(
+                  onRefresh: _openAddFromPull,
+                  onStatusChange: (status) {
+                    setState(() {
+                      _pullStatus = status;
+                      if (status == null ||
+                          status == RefreshIndicatorStatus.done ||
+                          status == RefreshIndicatorStatus.canceled) {
+                        _isPullingDown = false;
+                      }
+                    });
+                  },
+                  child: groups.isEmpty
+                      ? EmptyTimeline(onAdd: widget.onAdd)
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
+                          itemCount: groups.length,
+                          itemBuilder: (context, index) {
+                            final group = groups[index];
+                            return TimelineDaySection(
+                              label: group.label,
+                              entries: group.entries,
+                              onEditEntry: widget.onEditEntry,
+                            );
+                          },
+                        ),
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  bool _handleTimelineScroll(ScrollNotification notification) {
+    final atTop =
+        notification.metrics.pixels <=
+        notification.metrics.minScrollExtent + 0.5;
+    var pullingDown = _isPullingDown;
+
+    if (notification is ScrollUpdateNotification &&
+        notification.dragDetails != null &&
+        atTop) {
+      pullingDown = notification.dragDetails!.delta.dy > 0;
+    } else if (notification is OverscrollNotification && atTop) {
+      pullingDown = notification.overscroll < 0;
+    } else if (notification is ScrollEndNotification) {
+      pullingDown = false;
+    }
+
+    if (pullingDown != _isPullingDown) {
+      setState(() => _isPullingDown = pullingDown);
+    }
+    return false;
   }
 
   Future<void> _openAddFromPull() async {
@@ -115,6 +149,7 @@ class TimelineHeader extends StatelessWidget {
     required this.expense,
     required this.balance,
     required this.pullStatus,
+    required this.isPullingDown,
     required this.showBalanceTitle,
     required this.onToggleTitle,
     required this.onAdd,
@@ -127,6 +162,7 @@ class TimelineHeader extends StatelessWidget {
   final double expense;
   final double balance;
   final RefreshIndicatorStatus? pullStatus;
+  final bool isPullingDown;
   final bool showBalanceTitle;
   final VoidCallback onToggleTitle;
   final VoidCallback onAdd;
@@ -239,7 +275,11 @@ class TimelineHeader extends StatelessWidget {
             right: 0,
             top: 106,
             child: Center(
-              child: AddCircleButton(onTap: onAdd, pullStatus: pullStatus),
+              child: AddCircleButton(
+                onTap: onAdd,
+                pullStatus: pullStatus,
+                isPullingDown: isPullingDown,
+              ),
             ),
           ),
         ],
@@ -280,10 +320,12 @@ class AddCircleButton extends StatefulWidget {
     super.key,
     required this.onTap,
     required this.pullStatus,
+    required this.isPullingDown,
   });
 
   final VoidCallback onTap;
   final RefreshIndicatorStatus? pullStatus;
+  final bool isPullingDown;
 
   @override
   State<AddCircleButton> createState() => _AddCircleButtonState();
@@ -294,7 +336,8 @@ class _AddCircleButtonState extends State<AddCircleButton>
   late final AnimationController _controller;
 
   bool get _shouldRotate {
-    return widget.pullStatus != null &&
+    return widget.isPullingDown &&
+        widget.pullStatus != null &&
         widget.pullStatus != RefreshIndicatorStatus.done &&
         widget.pullStatus != RefreshIndicatorStatus.canceled;
   }
