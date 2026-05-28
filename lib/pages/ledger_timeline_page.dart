@@ -4,6 +4,7 @@ import '../models/entry_type.dart';
 import '../models/ledger_entry.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
+import '../utils/category_visuals.dart';
 import '../utils/ledger_formatters.dart';
 import '../utils/ledger_stats.dart';
 import '../widgets/category_avatar.dart';
@@ -445,10 +446,13 @@ class TimelineEntryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIncome = entry.type == EntryType.income;
-    final color = isIncome ? AppColors.income : categoryColor(entry.category);
-    final icon = isIncome
-        ? Icons.payments_outlined
-        : categoryIconData(entry.category);
+    final visual = categoryVisual(
+      entry.category,
+      type: entry.type,
+      iconKey: entry.categoryIconKey,
+    );
+    final color = isIncome ? AppColors.income : visual.color;
+    final icon = isIncome ? Icons.payments_outlined : visual.icon;
 
     return InkWell(
       onTap: onTap,
@@ -609,34 +613,9 @@ class LedgerEntryTile extends StatelessWidget {
 }
 
 Color categoryColor(String category) {
-  if (category.contains('餐') || category.contains('用餐')) {
-    return const Color(0xFF7DB7AE);
-  }
-  if (category.contains('水果')) return const Color(0xFF287E78);
-  if (category.contains('娱乐')) return const Color(0xFFF39A38);
-  if (category.contains('零食')) return const Color(0xFFA77B65);
-  if (category.contains('宝宝')) return const Color(0xFFE04F43);
-  if (category.contains('交通')) return const Color(0xFF4E79A7);
-  if (category.contains('购物')) return const Color(0xFFE15759);
-  if (category.contains('居住') || category.contains('住宿')) {
-    return const Color(0xFF8B6F47);
-  }
-  return AppColors.primary;
+  return categoryVisual(category).color;
 }
 
 IconData categoryIconData(String category) {
-  if (category.contains('餐') || category.contains('用餐')) {
-    return Icons.restaurant;
-  }
-  if (category.contains('水果')) return Icons.apple;
-  if (category.contains('娱乐')) return Icons.mic_external_on;
-  if (category.contains('零食')) return Icons.icecream;
-  if (category.contains('交通')) return Icons.directions_subway;
-  if (category.contains('购物')) return Icons.shopping_bag_outlined;
-  if (category.contains('居住') || category.contains('住宿')) {
-    return Icons.home_outlined;
-  }
-  if (category.contains('医疗')) return Icons.medical_services_outlined;
-  if (category.contains('学习')) return Icons.menu_book_outlined;
-  return Icons.sell_outlined;
+  return categoryVisual(category).icon;
 }

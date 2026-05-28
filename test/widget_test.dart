@@ -56,6 +56,53 @@ void main() {
       expect(find.text('导出 / 备份'), findsOneWidget);
     });
 
+    testWidgets('adds a custom category from settings without crashing', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      await _tapNavLabel(tester, '设置');
+      await tester.tap(find.byTooltip('新增分类').first);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '早餐');
+      await tester.tap(find.text('保存'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('早餐'), findsOneWidget);
+    });
+
+    testWidgets('edits and deletes categories from long press actions', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      await _tapNavLabel(tester, '设置');
+      await tester.longPress(find.text('给父母'));
+      await tester.pumpAndSettle();
+      expect(find.text('编辑分类'), findsOneWidget);
+      expect(find.text('删除分类'), findsOneWidget);
+
+      await tester.tap(find.text('编辑分类'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '家庭');
+      await tester.tap(find.text('保存'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('家庭'), findsOneWidget);
+      expect(find.text('给父母'), findsNothing);
+
+      await tester.longPress(find.text('一般'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('删除分类'));
+      await tester.pumpAndSettle();
+      expect(find.text('删除一般？'), findsOneWidget);
+
+      await tester.tap(find.text('删除'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('一般'), findsNothing);
+    });
+
     testWidgets('adds an expense through the quick entry sheet', (
       tester,
     ) async {

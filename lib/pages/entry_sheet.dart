@@ -4,7 +4,7 @@ import '../models/entry_type.dart';
 import '../models/ledger_book.dart';
 import '../models/ledger_entry.dart';
 import '../theme/app_colors.dart';
-import 'ledger_timeline_page.dart';
+import '../utils/category_visuals.dart';
 
 class EntrySheet extends StatefulWidget {
   const EntrySheet({
@@ -13,6 +13,8 @@ class EntrySheet extends StatefulWidget {
     required this.selectedBookId,
     required this.expenseCategories,
     required this.incomeCategories,
+    required this.expenseCategoryIcons,
+    required this.incomeCategoryIcons,
     this.entry,
   });
 
@@ -20,6 +22,8 @@ class EntrySheet extends StatefulWidget {
   final String selectedBookId;
   final List<String> expenseCategories;
   final List<String> incomeCategories;
+  final Map<String, String> expenseCategoryIcons;
+  final Map<String, String> incomeCategoryIcons;
   final LedgerEntry? entry;
 
   @override
@@ -37,6 +41,12 @@ class _EntrySheetState extends State<EntrySheet> {
     EntryType.expense => widget.expenseCategories,
     EntryType.income => widget.incomeCategories,
     EntryType.transfer => const ['账户转账', '信用卡还款'],
+  };
+
+  Map<String, String> get _categoryIcons => switch (_type) {
+    EntryType.expense => widget.expenseCategoryIcons,
+    EntryType.income => widget.incomeCategoryIcons,
+    EntryType.transfer => const {},
   };
 
   @override
@@ -71,6 +81,7 @@ class _EntrySheetState extends State<EntrySheet> {
         bookId: _bookId,
         title: _category,
         category: _category,
+        categoryIconKey: _categoryIcons[_category],
         amount: amount,
         type: _type,
         date: widget.entry?.date ?? DateTime.now(),
@@ -126,11 +137,15 @@ class _EntrySheetState extends State<EntrySheet> {
             ),
             SelectedCategoryBar(
               category: _category,
+              iconKey: _categoryIcons[_category],
+              type: _type,
               amount: _amountController.text,
             ),
             Expanded(
               child: CategoryPager(
                 categories: _categories,
+                categoryIcons: _categoryIcons,
+                type: _type,
                 selectedCategory: _category,
                 onSelected: (category) => setState(() => _category = category),
               ),
@@ -230,24 +245,29 @@ class SelectedCategoryBar extends StatelessWidget {
   const SelectedCategoryBar({
     super.key,
     required this.category,
+    required this.iconKey,
+    required this.type,
     required this.amount,
   });
 
   final String category;
+  final String? iconKey;
+  final EntryType type;
   final String amount;
 
   @override
   Widget build(BuildContext context) {
+    final visual = categoryVisual(category, type: type, iconKey: iconKey);
     return Container(
       height: 62,
-      color: categoryColor(category),
+      color: visual.color,
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
             backgroundColor: Colors.white.withValues(alpha: .2),
-            child: Icon(categoryIconData(category), color: Colors.white),
+            child: Icon(visual.icon, color: Colors.white),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -280,11 +300,15 @@ class CategoryPager extends StatefulWidget {
   const CategoryPager({
     super.key,
     required this.categories,
+    required this.categoryIcons,
+    required this.type,
     required this.selectedCategory,
     required this.onSelected,
   });
 
   final List<String> categories;
+  final Map<String, String> categoryIcons;
+  final EntryType type;
   final String selectedCategory;
   final ValueChanged<String> onSelected;
 
@@ -321,6 +345,8 @@ class _CategoryPagerState extends State<CategoryPager> {
             itemBuilder: (context, pageIndex) {
               return CategoryGridPage(
                 categories: pages[pageIndex],
+                categoryIcons: widget.categoryIcons,
+                type: widget.type,
                 selectedCategory: widget.selectedCategory,
                 onSelected: widget.onSelected,
               );
@@ -356,11 +382,15 @@ class CategoryGridPage extends StatelessWidget {
   const CategoryGridPage({
     super.key,
     required this.categories,
+    required this.categoryIcons,
+    required this.type,
     required this.selectedCategory,
     required this.onSelected,
   });
 
   final List<String> categories;
+  final Map<String, String> categoryIcons;
+  final EntryType type;
   final String selectedCategory;
   final ValueChanged<String> onSelected;
 
@@ -379,6 +409,11 @@ class CategoryGridPage extends StatelessWidget {
       itemBuilder: (context, index) {
         final category = categories[index];
         final selected = category == selectedCategory;
+        final visual = categoryVisual(
+          category,
+          type: type,
+          iconKey: categoryIcons[category],
+        );
         return InkWell(
           onTap: () => onSelected(category),
           borderRadius: BorderRadius.circular(8),
@@ -388,13 +423,9 @@ class CategoryGridPage extends StatelessWidget {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: selected
-                    ? categoryColor(category)
-                    : categoryColor(category).withValues(alpha: .88),
-                child: Icon(
-                  categoryIconData(category),
-                  color: Colors.white,
-                  size: 20,
-                ),
+                    ? visual.color
+                    : visual.color.withValues(alpha: .88),
+                child: Icon(visual.icon, color: Colors.white, size: 20),
               ),
               const SizedBox(height: 4),
               Text(

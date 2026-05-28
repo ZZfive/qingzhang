@@ -12,6 +12,7 @@ import '../pages/ledger_timeline_page.dart';
 import '../pages/search_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/statistics_page.dart';
+import '../utils/category_visuals.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -62,6 +63,14 @@ class _AppShellState extends State<AppShell> {
     '报销',
     '其他',
   ];
+  late final Map<String, String> _expenseCategoryIcons = {
+    for (final category in _expenseCategories)
+      category: inferCategoryIconKey(category, type: EntryType.expense),
+  };
+  late final Map<String, String> _incomeCategoryIcons = {
+    for (final category in _incomeCategories)
+      category: inferCategoryIconKey(category, type: EntryType.income),
+  };
 
   List<LedgerEntry> get _visibleEntries =>
       _entries.where((entry) => entry.bookId == _selectedBookId).toList();
@@ -94,6 +103,8 @@ class _AppShellState extends State<AppShell> {
           selectedBookId: _selectedBookId,
           expenseCategories: _expenseCategories,
           incomeCategories: _incomeCategories,
+          expenseCategoryIcons: _expenseCategoryIcons,
+          incomeCategoryIcons: _incomeCategoryIcons,
           entry: editingEntry,
         ),
       ),
@@ -170,14 +181,20 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
-  void _addCategory(EntryType type, String category) {
+  void _addCategory(EntryType type, String category, String iconKey) {
     final trimmed = category.trim();
     if (trimmed.isEmpty) return;
     final categories = type == EntryType.income
         ? _incomeCategories
         : _expenseCategories;
+    final icons = type == EntryType.income
+        ? _incomeCategoryIcons
+        : _expenseCategoryIcons;
     if (categories.contains(trimmed)) return;
-    setState(() => categories.add(trimmed));
+    setState(() {
+      categories.add(trimmed);
+      icons[trimmed] = iconKey;
+    });
   }
 
   @override
@@ -197,7 +214,10 @@ class _AppShellState extends State<AppShell> {
       SettingsPage(
         expenseCategories: _expenseCategories,
         incomeCategories: _incomeCategories,
-        onAddCategory: _addCategory,
+        expenseCategoryIcons: _expenseCategoryIcons,
+        incomeCategoryIcons: _incomeCategoryIcons,
+        onAddCategory: _openAddCategoryDialog,
+        onManageCategory: _openCategoryActions,
         onOpenImport: _openImportFlow,
         onOpenExport: _openExportPage,
       ),
@@ -250,5 +270,122 @@ class _AppShellState extends State<AppShell> {
         ),
       ),
     );
+  }
+
+  Future<void> _openAddCategoryDialog(EntryType type) async {
+    final route = DialogRoute<CategoryEditResult>(
+      context: context,
+      builder: (_) => AddCategoryDialog(type: type),
+    );
+    final result = await Navigator.of(context).push(route);
+    await route.completed;
+    if (!mounted || result == null) return;
+    _addCategory(type, result.name, result.iconKey);
+  }
+
+  Future<void> _openCategoryActions(EntryType type, String category) async {
+    final action = await showModalBottomSheet<CategoryAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => CategoryActionsSheet(category: category),
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case CategoryAction.edit:
+        await _openEditCategoryDialog(type, category);
+      case CategoryAction.delete:
+        await _confirmDeleteCategory(type, category);
+    }
+  }
+
+  Future<void> _openEditCategoryDialog(
+    EntryType type,
+    String originalCategory,
+  ) async {
+    final icons = type == EntryType.income
+        ? _incomeCategoryIcons
+        : _expenseCategoryIcons;
+    final route = DialogRoute<CategoryEditResult>(
+      context: context,
+      builder: (_) => AddCategoryDialog(
+        type: type,
+        initialName: originalCategory,
+        initialIconKey: icons[originalCategory],
+      ),
+    );
+    final result = await Navigator.of(context).push(route);
+    await route.completed;
+    if (!mounted || result == null) return;
+    _renameCategory(type, originalCategory, result.name, result.iconKey);
+  }
+
+  Future<void> _confirmDeleteCategory(EntryType type, String category) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('删除$category？'),
+        content: const Text('只会从可选分类中移除，不会删除已经记录的流水。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    _deleteCategory(type, category);
+  }
+
+  void _renameCategory(
+    EntryType type,
+    String oldCategory,
+    String newCategory,
+    String iconKey,
+  ) {
+    final trimmed = newCategory.trim();
+    if (trimmed.isEmpty) return;
+    final categories = type == EntryType.income
+        ? _incomeCategories
+        : _expenseCategories;
+    final icons = type == EntryType.income
+        ? _incomeCategoryIcons
+        : _expenseCategoryIcons;
+    if (trimmed != oldCategory && categories.contains(trimmed)) return;
+    final index = categories.indexOf(oldCategory);
+    if (index == -1) return;
+    setState(() {
+      categories[index] = trimmed;
+      if (trimmed != oldCategory) icons.remove(oldCategory);
+      icons[trimmed] = iconKey;
+      for (var i = 0; i < _entries.length; i++) {
+        final entry = _entries[i];
+        if (entry.type == type && entry.category == oldCategory) {
+          _entries[i] = entry.copyWith(
+            title: trimmed,
+            category: trimmed,
+            categoryIconKey: iconKey,
+          );
+        }
+      }
+    });
+  }
+
+  void _deleteCategory(EntryType type, String category) {
+    final categories = type == EntryType.income
+        ? _incomeCategories
+        : _expenseCategories;
+    final icons = type == EntryType.income
+        ? _incomeCategoryIcons
+        : _expenseCategoryIcons;
+    if (!categories.contains(category)) return;
+    setState(() {
+      categories.remove(category);
+      icons.remove(category);
+    });
   }
 }
