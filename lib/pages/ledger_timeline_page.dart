@@ -71,25 +71,37 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               onOpenSearch: widget.onOpenSearch,
             ),
             Expanded(
-              child: groups.isEmpty
-                  ? EmptyTimeline(onAdd: widget.onAdd)
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
-                      itemCount: groups.length,
-                      itemBuilder: (context, index) {
-                        final group = groups[index];
-                        return TimelineDaySection(
-                          label: group.label,
-                          entries: group.entries,
-                          onEditEntry: widget.onEditEntry,
-                        );
-                      },
-                    ),
+              child: RefreshIndicator(
+                color: const Color(0xFFE1AE28),
+                backgroundColor: Colors.white,
+                displacement: 24,
+                onRefresh: _openAddFromPull,
+                child: groups.isEmpty
+                    ? EmptyTimeline(onAdd: widget.onAdd)
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
+                        itemCount: groups.length,
+                        itemBuilder: (context, index) {
+                          final group = groups[index];
+                          return TimelineDaySection(
+                            label: group.label,
+                            entries: group.entries,
+                            onEditEntry: widget.onEditEntry,
+                          );
+                        },
+                      ),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openAddFromPull() async {
+    widget.onAdd();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
   }
 }
 
@@ -544,12 +556,20 @@ class EmptyTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: TextButton.icon(
-        onPressed: onAdd,
-        icon: const Icon(Icons.add),
-        label: const Text('记第一笔'),
-      ),
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: 240,
+          child: Center(
+            child: TextButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add),
+              label: const Text('记第一笔'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

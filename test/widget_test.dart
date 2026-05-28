@@ -124,6 +124,19 @@ void main() {
       expect(find.textContaining('给父母 88'), findsOneWidget);
     });
 
+    testWidgets('opens quick entry by pulling down the timeline', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      await tester.drag(find.byType(ListView).first, const Offset(0, 360));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('取消'), findsOneWidget);
+      expect(find.text('支出'), findsOneWidget);
+      expect(find.text('给父母'), findsAtLeastNWidgets(1));
+    });
+
     testWidgets('opens an existing entry for editing from the timeline', (
       tester,
     ) async {
