@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/entry_type.dart';
@@ -65,6 +67,7 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               income: widget.income,
               expense: widget.expense,
               balance: widget.balance,
+              entries: widget.entries,
               pullStatus: _pullStatus,
               isPullingDown: _isPullingDown,
               showBalanceTitle: _showBalanceInTitle,
@@ -148,6 +151,7 @@ class TimelineHeader extends StatelessWidget {
     required this.income,
     required this.expense,
     required this.balance,
+    required this.entries,
     required this.pullStatus,
     required this.isPullingDown,
     required this.showBalanceTitle,
@@ -161,6 +165,7 @@ class TimelineHeader extends StatelessWidget {
   final double income;
   final double expense;
   final double balance;
+  final List<LedgerEntry> entries;
   final RefreshIndicatorStatus? pullStatus;
   final bool isPullingDown;
   final bool showBalanceTitle;
@@ -277,6 +282,7 @@ class TimelineHeader extends StatelessWidget {
             child: Center(
               child: AddCircleButton(
                 onTap: onAdd,
+                entries: entries,
                 pullStatus: pullStatus,
                 isPullingDown: isPullingDown,
               ),
@@ -319,11 +325,13 @@ class AddCircleButton extends StatefulWidget {
   const AddCircleButton({
     super.key,
     required this.onTap,
+    required this.entries,
     required this.pullStatus,
     required this.isPullingDown,
   });
 
   final VoidCallback onTap;
+  final List<LedgerEntry> entries;
   final RefreshIndicatorStatus? pullStatus;
   final bool isPullingDown;
 
@@ -378,22 +386,196 @@ class _AddCircleButtonState extends State<AddCircleButton>
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: widget.onTap,
-        child: Container(
-          width: 112,
-          height: 112,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFE1AE28), width: 7),
-          ),
-          child: Center(
-            child: RotationTransition(
-              turns: _controller,
-              child: const Icon(Icons.add, size: 44, color: Color(0xFFE1AE28)),
+        child: CustomPaint(
+          painter: CategoryRingPainter(data: _categoryRingData()),
+          child: SizedBox(
+            width: 112,
+            height: 112,
+            child: Center(
+              child: RotationTransition(
+                turns: _controller,
+                child: const Icon(
+                  Icons.add,
+                  size: 44,
+                  color: Color(0xFFE1AE28),
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  CategoryRingData _categoryRingData() {
+    final totals = <String, _CategoryRingTotal>{};
+    for (final entry in widget.entries) {
+      if (entry.type == EntryType.transfer || entry.amount <= 0) continue;
+      final visual = categoryVisual(
+        entry.category,
+        type: entry.type,
+        iconKey: entry.categoryIconKey,
+      );
+      final key =
+          '${entry.type.index}:${entry.category}:${entry.categoryIconKey ?? ''}';
+      totals.update(
+        key,
+        (total) => total.copyWith(amount: total.amount + entry.amount),
+        ifAbsent: () => _CategoryRingTotal(
+          amount: entry.amount,
+          color: visual.color,
+          type: entry.type,
+        ),
+      );
+    }
+    if (totals.isEmpty) {
+      return const CategoryRingData(
+        income: [],
+        expense: [CategoryRingSegment(amount: 1, color: Color(0xFFE1AE28))],
+      );
+    }
+    final income = <CategoryRingSegment>[];
+    final expense = <CategoryRingSegment>[];
+    for (final total in totals.values) {
+      final segment = CategoryRingSegment(
+        amount: total.amount,
+        color: total.color,
+      );
+      if (total.type == EntryType.income) {
+        income.add(segment);
+      } else {
+        expense.add(segment);
+      }
+    }
+    income.sort((a, b) => b.amount.compareTo(a.amount));
+    expense.sort((a, b) => b.amount.compareTo(a.amount));
+    return CategoryRingData(income: income, expense: expense);
+  }
+}
+
+class _CategoryRingTotal {
+  const _CategoryRingTotal({
+    required this.amount,
+    required this.color,
+    required this.type,
+  });
+
+  final double amount;
+  final Color color;
+  final EntryType type;
+
+  _CategoryRingTotal copyWith({double? amount, Color? color}) {
+    return _CategoryRingTotal(
+      amount: amount ?? this.amount,
+      color: color ?? this.color,
+      type: type,
+    );
+  }
+}
+
+class CategoryRingData {
+  const CategoryRingData({required this.income, required this.expense});
+
+  final List<CategoryRingSegment> income;
+  final List<CategoryRingSegment> expense;
+
+  double get incomeTotal =>
+      income.fold<double>(0, (sum, segment) => sum + segment.amount);
+
+  double get expenseTotal =>
+      expense.fold<double>(0, (sum, segment) => sum + segment.amount);
+}
+
+class CategoryRingSegment {
+  const CategoryRingSegment({required this.amount, required this.color});
+
+  final double amount;
+  final Color color;
+}
+
+class CategoryRingPainter extends CustomPainter {
+  const CategoryRingPainter({required this.data});
+
+  final CategoryRingData data;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final incomeTotal = data.incomeTotal;
+    final expenseTotal = data.expenseTotal;
+    final total = incomeTotal + expenseTotal;
+    if (total <= 0) return;
+
+    final strokeWidth = 7.0;
+    final rect =
+        Offset(strokeWidth / 2, strokeWidth / 2) &
+        Size(size.width - strokeWidth, size.height - strokeWidth);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    final incomeSweep = math.pi * 2 * incomeTotal / total;
+    final expenseSweep = math.pi * 2 - incomeSweep;
+
+    _drawSide(
+      canvas: canvas,
+      rect: rect,
+      paint: paint,
+      segments: data.income,
+      start: math.pi - incomeSweep / 2,
+      sweep: incomeSweep,
+    );
+    _drawSide(
+      canvas: canvas,
+      rect: rect,
+      paint: paint,
+      segments: data.expense,
+      start: -expenseSweep / 2,
+      sweep: expenseSweep,
+    );
+  }
+
+  void _drawSide({
+    required Canvas canvas,
+    required Rect rect,
+    required Paint paint,
+    required List<CategoryRingSegment> segments,
+    required double start,
+    required double sweep,
+  }) {
+    if (sweep <= 0) return;
+    final total = segments.fold<double>(0, (sum, item) => sum + item.amount);
+    if (total <= 0) return;
+
+    var sideStart = start;
+    for (final segment in segments) {
+      final segmentSweep = sweep * segment.amount / total;
+      paint.color = segment.color;
+      canvas.drawArc(rect, sideStart, segmentSweep, false, paint);
+      sideStart += segmentSweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CategoryRingPainter oldDelegate) {
+    return _segmentsChanged(data.income, oldDelegate.data.income) ||
+        _segmentsChanged(data.expense, oldDelegate.data.expense);
+  }
+
+  bool _segmentsChanged(
+    List<CategoryRingSegment> segments,
+    List<CategoryRingSegment> oldSegments,
+  ) {
+    if (segments.length != oldSegments.length) return true;
+    for (var i = 0; i < segments.length; i++) {
+      final segment = segments[i];
+      final oldSegment = oldSegments[i];
+      if (segment.amount != oldSegment.amount ||
+          segment.color != oldSegment.color) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
