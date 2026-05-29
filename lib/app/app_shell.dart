@@ -200,6 +200,10 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _deleteEntry(LedgerEntry entry) {
+    setState(() => _entries.remove(entry));
+  }
+
   void _addCategory(EntryType type, String category, String iconKey) {
     final trimmed = category.trim();
     if (trimmed.isEmpty) return;
@@ -227,6 +231,7 @@ class _AppShellState extends State<AppShell> {
         balance: _balance,
         onAdd: _openEntrySheet,
         onEditEntry: _openEntrySheet,
+        onDeleteEntry: _deleteEntry,
         onOpenBooks: _openBooksPage,
         onOpenSearch: _openSearchPage,
       ),

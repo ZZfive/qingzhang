@@ -21,6 +21,7 @@ class LedgerTimelinePage extends StatefulWidget {
     required this.balance,
     required this.onAdd,
     required this.onEditEntry,
+    required this.onDeleteEntry,
     required this.onOpenBooks,
     required this.onOpenSearch,
   });
@@ -32,6 +33,7 @@ class LedgerTimelinePage extends StatefulWidget {
   final double balance;
   final VoidCallback onAdd;
   final ValueChanged<LedgerEntry> onEditEntry;
+  final ValueChanged<LedgerEntry> onDeleteEntry;
   final VoidCallback onOpenBooks;
   final VoidCallback onOpenSearch;
 
@@ -40,9 +42,12 @@ class LedgerTimelinePage extends StatefulWidget {
 }
 
 class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
+  static const double _pullTriggerDistance = 96;
+
   bool _showBalanceInTitle = false;
-  RefreshIndicatorStatus? _pullStatus;
   bool _isPullingDown = false;
+  bool _openingFromPull = false;
+  double _pullDistance = 0;
   late List<DayGroup> _groups;
   late CategoryRingData _ringData;
 
@@ -77,7 +82,6 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               expense: widget.expense,
               balance: widget.balance,
               ringData: _ringData,
-              pullStatus: _pullStatus,
               isPullingDown: _isPullingDown,
               showBalanceTitle: _showBalanceInTitle,
               onToggleTitle: () =>
@@ -89,34 +93,22 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
             Expanded(
               child: NotificationListener<ScrollNotification>(
                 onNotification: _handleTimelineScroll,
-                child: RefreshIndicator.noSpinner(
-                  onRefresh: _openAddFromPull,
-                  onStatusChange: (status) {
-                    setState(() {
-                      _pullStatus = status;
-                      if (status == null ||
-                          status == RefreshIndicatorStatus.done ||
-                          status == RefreshIndicatorStatus.canceled) {
-                        _isPullingDown = false;
-                      }
-                    });
-                  },
-                  child: _groups.isEmpty
-                      ? EmptyTimeline(onAdd: widget.onAdd)
-                      : ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
-                          itemCount: _groups.length,
-                          itemBuilder: (context, index) {
-                            final group = _groups[index];
-                            return TimelineDaySection(
-                              label: group.label,
-                              entries: group.entries,
-                              onEditEntry: widget.onEditEntry,
-                            );
-                          },
-                        ),
-                ),
+                child: _groups.isEmpty
+                    ? EmptyTimeline(onAdd: widget.onAdd)
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
+                        itemCount: _groups.length,
+                        itemBuilder: (context, index) {
+                          final group = _groups[index];
+                          return TimelineDaySection(
+                            label: group.label,
+                            entries: group.entries,
+                            onEditEntry: widget.onEditEntry,
+                            onDeleteEntry: widget.onDeleteEntry,
+                          );
+                        },
+                      ),
               ),
             ),
           ],
@@ -131,30 +123,68 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
   }
 
   bool _handleTimelineScroll(ScrollNotification notification) {
+    if (_openingFromPull) return false;
+
     final atTop =
         notification.metrics.pixels <=
         notification.metrics.minScrollExtent + 0.5;
-    var pullingDown = _isPullingDown;
 
-    if (notification is ScrollUpdateNotification &&
-        notification.dragDetails != null &&
-        atTop) {
-      pullingDown = notification.dragDetails!.delta.dy > 0;
+    if (notification is ScrollStartNotification) {
+      _resetPullTracking();
+    } else if (notification is ScrollUpdateNotification &&
+        notification.dragDetails != null) {
+      final delta = notification.dragDetails!.delta.dy;
+      if (atTop && delta > 0) {
+        _trackPull(delta);
+      } else if (delta < 0) {
+        _resetPullTracking();
+      }
     } else if (notification is OverscrollNotification && atTop) {
-      pullingDown = notification.overscroll < 0;
+      if (notification.overscroll < 0) {
+        _trackPull(-notification.overscroll);
+      } else {
+        _resetPullTracking();
+      }
     } else if (notification is ScrollEndNotification) {
-      pullingDown = false;
+      _finishPullTracking();
     }
 
-    if (pullingDown != _isPullingDown) {
-      setState(() => _isPullingDown = pullingDown);
-    }
     return false;
   }
 
-  Future<void> _openAddFromPull() async {
-    widget.onAdd();
-    await Future<void>.delayed(const Duration(milliseconds: 250));
+  void _trackPull(double delta) {
+    _pullDistance = (_pullDistance + delta).clamp(0, _pullTriggerDistance * 2);
+    if (!_isPullingDown) {
+      setState(() => _isPullingDown = true);
+    }
+  }
+
+  void _finishPullTracking() {
+    final shouldOpen = _pullDistance >= _pullTriggerDistance;
+    _resetPullTracking();
+    if (shouldOpen) _openAddFromPull();
+  }
+
+  void _resetPullTracking() {
+    _pullDistance = 0;
+    if (_isPullingDown) {
+      setState(() => _isPullingDown = false);
+    }
+  }
+
+  void _openAddFromPull() {
+    if (_openingFromPull) return;
+    _openingFromPull = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        _openingFromPull = false;
+        return;
+      }
+      widget.onAdd();
+      Future<void>.delayed(const Duration(milliseconds: 360), () {
+        if (mounted) _openingFromPull = false;
+      });
+    });
   }
 }
 
@@ -166,7 +196,6 @@ class TimelineHeader extends StatelessWidget {
     required this.expense,
     required this.balance,
     required this.ringData,
-    required this.pullStatus,
     required this.isPullingDown,
     required this.showBalanceTitle,
     required this.onToggleTitle,
@@ -180,7 +209,6 @@ class TimelineHeader extends StatelessWidget {
   final double expense;
   final double balance;
   final CategoryRingData ringData;
-  final RefreshIndicatorStatus? pullStatus;
   final bool isPullingDown;
   final bool showBalanceTitle;
   final VoidCallback onToggleTitle;
@@ -297,7 +325,6 @@ class TimelineHeader extends StatelessWidget {
               child: AddCircleButton(
                 onTap: onAdd,
                 ringData: ringData,
-                pullStatus: pullStatus,
                 isPullingDown: isPullingDown,
               ),
             ),
@@ -340,13 +367,11 @@ class AddCircleButton extends StatefulWidget {
     super.key,
     required this.onTap,
     required this.ringData,
-    required this.pullStatus,
     required this.isPullingDown,
   });
 
   final VoidCallback onTap;
   final CategoryRingData ringData;
-  final RefreshIndicatorStatus? pullStatus;
   final bool isPullingDown;
 
   @override
@@ -357,12 +382,7 @@ class _AddCircleButtonState extends State<AddCircleButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
-  bool get _shouldRotate {
-    return widget.isPullingDown &&
-        widget.pullStatus != null &&
-        widget.pullStatus != RefreshIndicatorStatus.done &&
-        widget.pullStatus != RefreshIndicatorStatus.canceled;
-  }
+  bool get _shouldRotate => widget.isPullingDown;
 
   @override
   void initState() {
@@ -393,27 +413,34 @@ class _AddCircleButtonState extends State<AddCircleButton>
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 8,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: widget.onTap,
-        child: CustomPaint(
-          painter: CategoryRingPainter(data: widget.ringData),
-          child: SizedBox(
-            width: 104,
-            height: 104,
-            child: Center(
-              child: RotationTransition(
-                turns: _controller,
-                child: const Icon(
-                  Icons.add,
-                  size: 40,
-                  color: Color(0xFFE1AE28),
+    return SizedBox.square(
+      dimension: 104,
+      child: ClipOval(
+        child: Material(
+          color: Colors.white,
+          elevation: 8,
+          child: InkWell(
+            onTap: widget.onTap,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: CustomPaint(
+                      painter: CategoryRingPainter(data: widget.ringData),
+                    ),
+                  ),
                 ),
-              ),
+                Center(
+                  child: RotationTransition(
+                    turns: _controller,
+                    child: const Icon(
+                      Icons.add,
+                      size: 40,
+                      color: Color(0xFFE1AE28),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -633,11 +660,13 @@ class TimelineDaySection extends StatelessWidget {
     required this.label,
     required this.entries,
     required this.onEditEntry,
+    required this.onDeleteEntry,
   });
 
   final String label;
   final List<LedgerEntry> entries;
   final ValueChanged<LedgerEntry> onEditEntry;
+  final ValueChanged<LedgerEntry> onDeleteEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -652,7 +681,12 @@ class TimelineDaySection extends StatelessWidget {
       children: [
         TimelineDayHeader(label: label, expense: expense, income: income),
         for (final entry in entries)
-          TimelineEntryRow(entry: entry, onTap: () => onEditEntry(entry)),
+          TimelineEntryRow(
+            entry: entry,
+            onTap: () => onEditEntry(entry),
+            onEdit: () => onEditEntry(entry),
+            onDelete: () => onDeleteEntry(entry),
+          ),
       ],
     );
   }
@@ -728,14 +762,30 @@ class TimelineDayHeader extends StatelessWidget {
   }
 }
 
-class TimelineEntryRow extends StatelessWidget {
-  const TimelineEntryRow({super.key, required this.entry, required this.onTap});
+class TimelineEntryRow extends StatefulWidget {
+  const TimelineEntryRow({
+    super.key,
+    required this.entry,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final LedgerEntry entry;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  State<TimelineEntryRow> createState() => _TimelineEntryRowState();
+}
+
+class _TimelineEntryRowState extends State<TimelineEntryRow> {
+  bool _actionsVisible = false;
 
   @override
   Widget build(BuildContext context) {
+    final entry = widget.entry;
     final isIncome = entry.type == EntryType.income;
     final visual = categoryVisual(
       entry.category,
@@ -745,45 +795,146 @@ class TimelineEntryRow extends StatelessWidget {
     final color = isIncome ? AppColors.income : visual.color;
     final icon = isIncome ? Icons.payments_outlined : visual.icon;
 
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 66),
-        child: Row(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 22),
-                child: isIncome
-                    ? _EntryTitle(entry: entry, alignRight: true)
-                    : const SizedBox(),
-              ),
-            ),
-            SizedBox(
-              width: 76,
-              child: Stack(
-                alignment: Alignment.center,
+    return SizedBox(
+      height: 66,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final centerX = constraints.maxWidth / 2;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Row(
                 children: [
-                  Positioned.fill(
-                    child: Center(
-                      child: Container(width: 1, color: AppColors.subtle),
+                  Expanded(
+                    child: InkWell(
+                      onTap: widget.onTap,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 22),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: isIncome
+                              ? _EntryTitle(entry: entry, alignRight: true)
+                              : const SizedBox(),
+                        ),
+                      ),
                     ),
                   ),
-                  CircleAvatar(
-                    radius: 19,
-                    backgroundColor: color,
-                    child: Icon(icon, color: Colors.white, size: 19),
+                  SizedBox(
+                    width: 76,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned.fill(
+                          child: Center(
+                            child: Container(width: 1, color: AppColors.subtle),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(
+                            () => _actionsVisible = !_actionsVisible,
+                          ),
+                          child: CircleAvatar(
+                            radius: 19,
+                            backgroundColor: color,
+                            child: Icon(icon, color: Colors.white, size: 19),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: widget.onTap,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 22),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: isIncome
+                              ? const SizedBox()
+                              : _EntryTitle(entry: entry),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 22),
-                child: isIncome ? const SizedBox() : _EntryTitle(entry: entry),
+              EntryActionButton(
+                visible: _actionsVisible,
+                left: centerX - 17 + (_actionsVisible ? -48 : 0),
+                icon: Icons.remove,
+                tooltip: '删除流水',
+                color: AppColors.expense,
+                onTap: () {
+                  setState(() => _actionsVisible = false);
+                  widget.onDelete();
+                },
+              ),
+              EntryActionButton(
+                visible: _actionsVisible,
+                left: centerX - 17 + (_actionsVisible ? 48 : 0),
+                icon: Icons.edit_outlined,
+                tooltip: '编辑流水',
+                color: AppColors.primary,
+                onTap: () {
+                  setState(() => _actionsVisible = false);
+                  widget.onEdit();
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class EntryActionButton extends StatelessWidget {
+  const EntryActionButton({
+    super.key,
+    required this.visible,
+    required this.left,
+    required this.icon,
+    required this.tooltip,
+    required this.color,
+    required this.onTap,
+  });
+
+  final bool visible;
+  final double left;
+  final IconData icon;
+  final String tooltip;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      top: 16,
+      left: left,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: const Duration(milliseconds: 120),
+          child: Material(
+            color: Colors.white,
+            shape: const CircleBorder(),
+            elevation: visible ? 4 : 0,
+            child: IconButton(
+              onPressed: onTap,
+              tooltip: tooltip,
+              icon: Icon(icon, size: 18),
+              color: color,
+              constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                side: BorderSide(color: color.withValues(alpha: .35)),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

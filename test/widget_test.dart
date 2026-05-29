@@ -137,6 +137,18 @@ void main() {
       expect(find.text('给父母'), findsAtLeastNWidgets(1));
     });
 
+    testWidgets('does not open quick entry below the add circle', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      final addCenter = tester.getCenter(find.byIcon(Icons.add).first);
+      await tester.tapAt(addCenter + const Offset(0, 70));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('取消'), findsNothing);
+    });
+
     testWidgets('opens an existing entry for editing from the timeline', (
       tester,
     ) async {
@@ -148,6 +160,32 @@ void main() {
       expect(find.byTooltip('取消'), findsOneWidget);
       expect(find.text('餐饮'), findsAtLeastNWidgets(1));
       expect(find.textContaining('38'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('opens edit and delete actions from a timeline icon', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      await tester.tap(find.byIcon(Icons.restaurant).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('编辑流水').hitTestable().first);
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('取消'), findsOneWidget);
+      expect(find.text('餐饮'), findsAtLeastNWidgets(1));
+
+      await tester.tap(find.byTooltip('取消'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('备注联想'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.restaurant).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('删除流水').hitTestable().first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('备注联想'), findsNothing);
     });
 
     testWidgets('filters transactions from the search tab', (tester) async {
