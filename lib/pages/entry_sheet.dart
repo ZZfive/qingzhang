@@ -107,19 +107,16 @@ class _EntrySheetState extends State<EntrySheet> {
     } else {
       _amountController.text = '$text$value';
     }
-    setState(() {});
   }
 
   void _deleteAmount() {
     final text = _amountController.text;
     if (text.isEmpty) return;
     _amountController.text = text.substring(0, text.length - 1);
-    setState(() {});
   }
 
   void _clearAmount() {
     _amountController.clear();
-    setState(() {});
   }
 
   @override
@@ -139,7 +136,7 @@ class _EntrySheetState extends State<EntrySheet> {
               category: _category,
               iconKey: _categoryIcons[_category],
               type: _type,
-              amount: _amountController.text,
+              amountController: _amountController,
             ),
             Expanded(
               child: CategoryPager(
@@ -184,12 +181,12 @@ class EntryTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 54,
+      height: 48,
       child: Row(
         children: [
           IconButton(
             onPressed: onCancel,
-            icon: const Icon(Icons.close, size: 30),
+            icon: const Icon(Icons.close, size: 24),
             tooltip: '取消',
             color: AppColors.muted,
           ),
@@ -206,7 +203,7 @@ class EntryTopBar extends StatelessWidget {
             onTap: () => onTypeChanged(EntryType.expense),
           ),
           const Spacer(),
-          const SizedBox(width: 48),
+          const SizedBox(width: 42),
         ],
       ),
     );
@@ -233,7 +230,7 @@ class TypeTab extends StatelessWidget {
         label,
         style: TextStyle(
           color: selected ? const Color(0xFFD4A22A) : AppColors.muted,
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
         ),
       ),
@@ -247,29 +244,29 @@ class SelectedCategoryBar extends StatelessWidget {
     required this.category,
     required this.iconKey,
     required this.type,
-    required this.amount,
+    required this.amountController,
   });
 
   final String category;
   final String? iconKey;
   final EntryType type;
-  final String amount;
+  final TextEditingController amountController;
 
   @override
   Widget build(BuildContext context) {
     final visual = categoryVisual(category, type: type, iconKey: iconKey);
     return Container(
-      height: 62,
+      height: 54,
       color: visual.color,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 22,
+            radius: 19,
             backgroundColor: Colors.white.withValues(alpha: .2),
-            child: Icon(visual.icon, color: Colors.white),
+            child: Icon(visual.icon, color: Colors.white, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               category,
@@ -277,18 +274,24 @@ class SelectedCategoryBar extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 22,
+                fontSize: 19,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          Text(
-            '¥ ${amount.isEmpty ? '0.00' : amount}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w500,
-            ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: amountController,
+            builder: (context, value, child) {
+              final amount = value.text.isEmpty ? '0.00' : value.text;
+              return Text(
+                '¥ $amount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w500,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -397,14 +400,14 @@ class CategoryGridPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
       physics: const NeverScrollableScrollPhysics(),
       itemCount: categories.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 5,
-        mainAxisSpacing: 4,
+        mainAxisSpacing: 2,
         crossAxisSpacing: 6,
-        childAspectRatio: .95,
+        childAspectRatio: 1.02,
       ),
       itemBuilder: (context, index) {
         final category = categories[index];
@@ -421,20 +424,20 @@ class CategoryGridPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircleAvatar(
-                radius: 20,
+                radius: 18,
                 backgroundColor: selected
                     ? visual.color
                     : visual.color.withValues(alpha: .88),
-                child: Icon(visual.icon, color: Colors.white, size: 20),
+                child: Icon(visual.icon, color: Colors.white, size: 18),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Text(
                 category,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: selected ? AppColors.text : AppColors.muted,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
                 ),
               ),
@@ -463,7 +466,7 @@ class EntryMetaBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56,
+      height: 50,
       color: const Color(0xFFF2F3F5),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
@@ -517,7 +520,7 @@ class NumberPad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 238,
+      height: 220,
       child: Row(
         children: [
           Expanded(
@@ -525,7 +528,7 @@ class NumberPad extends StatelessWidget {
             child: GridView.count(
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 3,
-              childAspectRatio: 1.54,
+              childAspectRatio: 1.66,
               children: [
                 for (final key in const [
                   '1',
@@ -568,7 +571,7 @@ class NumberPad extends StatelessWidget {
                       child: const Text(
                         'OK',
                         style: TextStyle(
-                          fontSize: 32,
+                          fontSize: 28,
                           color: AppColors.text,
                           fontWeight: FontWeight.w300,
                         ),
@@ -604,7 +607,7 @@ class NumberKey extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: label.length > 1 ? 24 : 30,
+            fontSize: label.length > 1 ? 21 : 26,
             color: AppColors.text,
             fontWeight: FontWeight.w300,
           ),

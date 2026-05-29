@@ -36,7 +36,7 @@ class SettingsPage extends StatelessWidget {
       title: '设置',
       subtitle: '数据属于你，可以随时带走',
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 88),
         children: [
           CategorySettingsCard(
             title: '支出分类',
@@ -46,7 +46,7 @@ class SettingsPage extends StatelessWidget {
             onAdd: () => onAddCategory(EntryType.expense),
             onManage: onManageCategory,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           CategorySettingsCard(
             title: '收入分类',
             type: EntryType.income,
@@ -55,7 +55,7 @@ class SettingsPage extends StatelessWidget {
             onAdd: () => onAddCategory(EntryType.income),
             onManage: onManageCategory,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +63,7 @@ class SettingsPage extends StatelessWidget {
                 const SectionTitle('数据与备份'),
                 const SizedBox(height: 8),
                 Text('默认本地保存；导入、导出、备份永久免费。', style: AppText.muted(context)),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 FilledButton.icon(
                   onPressed: onOpenImport,
                   icon: const Icon(Icons.upload_file),
@@ -78,7 +78,7 @@ class SettingsPage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           AppCard(
             child: Column(
               children: const [
@@ -222,13 +222,13 @@ class IconPresetPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 132,
+      height: 116,
       child: GridView.builder(
         itemCount: categoryVisualPresets.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 6,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
         ),
         itemBuilder: (context, index) {
           final visual = categoryVisualPresets[index];
@@ -237,14 +237,14 @@ class IconPresetPicker extends StatelessWidget {
             onTap: () => onSelected(visual.key),
             customBorder: const CircleBorder(),
             child: CircleAvatar(
-              radius: 20,
+              radius: 18,
               backgroundColor: selected
                   ? visual.color
                   : visual.color.withValues(alpha: .22),
               child: Icon(
                 visual.icon,
                 color: selected ? Colors.white : visual.color,
-                size: 20,
+                size: 18,
               ),
             ),
           );
@@ -322,15 +322,15 @@ class CategorySettingsCard extends StatelessWidget {
               Expanded(child: SectionTitle(title)),
               IconButton(
                 onPressed: onAdd,
-                icon: const Icon(Icons.add_circle_outline),
+                icon: const Icon(Icons.add_circle_outline, size: 22),
                 tooltip: '新增分类',
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 7,
+            runSpacing: 9,
             children: [
               for (final category in categories)
                 CategoryIconItem(
@@ -367,22 +367,22 @@ class CategoryIconItem extends StatelessWidget {
     return GestureDetector(
       onLongPress: onLongPress,
       child: SizedBox(
-        width: 58,
+        width: 54,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
-              radius: 20,
+              radius: 18,
               backgroundColor: visual.color,
-              child: Icon(visual.icon, color: Colors.white, size: 20),
+              child: Icon(visual.icon, color: Colors.white, size: 18),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 4),
             Text(
               category,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: AppText.muted(context).copyWith(fontSize: 12),
+              style: AppText.muted(context).copyWith(fontSize: 11),
             ),
           ],
         ),
@@ -411,8 +411,9 @@ class SettingsRow extends StatelessWidget {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Icon(icon, color: AppColors.primary),
-          title: Text(title),
+          dense: true,
+          leading: Icon(icon, color: AppColors.primary, size: 21),
+          title: Text(title, style: const TextStyle(fontSize: 14)),
           trailing: Text(detail, style: AppText.muted(context)),
         ),
         if (showDivider) const Divider(height: 1),

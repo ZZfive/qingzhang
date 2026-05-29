@@ -20,8 +20,8 @@ class AppTheme {
         surfaceTintColor: AppColors.bg,
         titleTextStyle: TextStyle(
           color: AppColors.text,
-          fontSize: 21,
-          fontWeight: FontWeight.w900,
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
         ),
       ),
       iconTheme: const IconThemeData(size: 22),

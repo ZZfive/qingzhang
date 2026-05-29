@@ -27,7 +27,7 @@ class AppPage extends StatelessWidget {
             Text(subtitle, style: AppText.muted(context)),
           ],
         ),
-        toolbarHeight: 82,
+        toolbarHeight: 72,
         actions: actions,
       ),
       body: SafeArea(child: child),

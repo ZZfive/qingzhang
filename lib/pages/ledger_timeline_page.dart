@@ -43,6 +43,14 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
   bool _showBalanceInTitle = false;
   RefreshIndicatorStatus? _pullStatus;
   bool _isPullingDown = false;
+  late List<DayGroup> _groups;
+  late CategoryRingData _ringData;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshDerivedData();
+  }
 
   @override
   void didUpdateWidget(covariant LedgerTimelinePage oldWidget) {
@@ -50,12 +58,13 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
     if (oldWidget.selectedBookName != widget.selectedBookName) {
       _showBalanceInTitle = false;
     }
+    if (oldWidget.entries != widget.entries) {
+      _refreshDerivedData();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final groups = groupEntriesByDay(widget.entries);
-
     return ColoredBox(
       color: Colors.white,
       child: SafeArea(
@@ -67,7 +76,7 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
               income: widget.income,
               expense: widget.expense,
               balance: widget.balance,
-              entries: widget.entries,
+              ringData: _ringData,
               pullStatus: _pullStatus,
               isPullingDown: _isPullingDown,
               showBalanceTitle: _showBalanceInTitle,
@@ -92,14 +101,14 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
                       }
                     });
                   },
-                  child: groups.isEmpty
+                  child: _groups.isEmpty
                       ? EmptyTimeline(onAdd: widget.onAdd)
                       : ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(0, 0, 0, 96),
-                          itemCount: groups.length,
+                          itemCount: _groups.length,
                           itemBuilder: (context, index) {
-                            final group = groups[index];
+                            final group = _groups[index];
                             return TimelineDaySection(
                               label: group.label,
                               entries: group.entries,
@@ -114,6 +123,11 @@ class _LedgerTimelinePageState extends State<LedgerTimelinePage> {
         ),
       ),
     );
+  }
+
+  void _refreshDerivedData() {
+    _groups = groupEntriesByDay(widget.entries);
+    _ringData = categoryRingData(widget.entries);
   }
 
   bool _handleTimelineScroll(ScrollNotification notification) {
@@ -151,7 +165,7 @@ class TimelineHeader extends StatelessWidget {
     required this.income,
     required this.expense,
     required this.balance,
-    required this.entries,
+    required this.ringData,
     required this.pullStatus,
     required this.isPullingDown,
     required this.showBalanceTitle,
@@ -165,7 +179,7 @@ class TimelineHeader extends StatelessWidget {
   final double income;
   final double expense;
   final double balance;
-  final List<LedgerEntry> entries;
+  final CategoryRingData ringData;
   final RefreshIndicatorStatus? pullStatus;
   final bool isPullingDown;
   final bool showBalanceTitle;
@@ -178,12 +192,12 @@ class TimelineHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final titleText = showBalanceTitle ? formatCurrency(balance) : bookName;
     return SizedBox(
-      height: 258,
+      height: 238,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            height: 156,
+            height: 144,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -211,8 +225,8 @@ class TimelineHeader extends StatelessWidget {
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 220),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 10,
+                        horizontal: 16,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: .18),
@@ -227,7 +241,7 @@ class TimelineHeader extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 19,
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -246,25 +260,25 @@ class TimelineHeader extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: 144,
-            child: Container(height: 114, color: Colors.white),
+            top: 132,
+            child: Container(height: 106, color: Colors.white),
           ),
           Positioned(
             left: 0,
             right: 0,
-            top: 198,
+            top: 185,
             child: Row(
               children: [
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 46),
+                    padding: const EdgeInsets.only(left: 42),
                     child: SummaryAmount(label: '当月收入', amount: income),
                   ),
                 ),
                 const SizedBox(width: 126),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 46),
+                    padding: const EdgeInsets.only(right: 42),
                     child: SummaryAmount(
                       label: '当月支出',
                       amount: expense,
@@ -278,11 +292,11 @@ class TimelineHeader extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: 106,
+            top: 98,
             child: Center(
               child: AddCircleButton(
                 onTap: onAdd,
-                entries: entries,
+                ringData: ringData,
                 pullStatus: pullStatus,
                 isPullingDown: isPullingDown,
               ),
@@ -315,7 +329,7 @@ class HeaderIconButton extends StatelessWidget {
       style: IconButton.styleFrom(
         foregroundColor: Colors.white,
         backgroundColor: Colors.white.withValues(alpha: .16),
-        fixedSize: const Size.square(48),
+        fixedSize: const Size.square(42),
       ),
     );
   }
@@ -325,13 +339,13 @@ class AddCircleButton extends StatefulWidget {
   const AddCircleButton({
     super.key,
     required this.onTap,
-    required this.entries,
+    required this.ringData,
     required this.pullStatus,
     required this.isPullingDown,
   });
 
   final VoidCallback onTap;
-  final List<LedgerEntry> entries;
+  final CategoryRingData ringData;
   final RefreshIndicatorStatus? pullStatus;
   final bool isPullingDown;
 
@@ -387,16 +401,16 @@ class _AddCircleButtonState extends State<AddCircleButton>
         customBorder: const CircleBorder(),
         onTap: widget.onTap,
         child: CustomPaint(
-          painter: CategoryRingPainter(data: _categoryRingData()),
+          painter: CategoryRingPainter(data: widget.ringData),
           child: SizedBox(
-            width: 112,
-            height: 112,
+            width: 104,
+            height: 104,
             child: Center(
               child: RotationTransition(
                 turns: _controller,
                 child: const Icon(
                   Icons.add,
-                  size: 44,
+                  size: 40,
                   color: Color(0xFFE1AE28),
                 ),
               ),
@@ -406,51 +420,51 @@ class _AddCircleButtonState extends State<AddCircleButton>
       ),
     );
   }
+}
 
-  CategoryRingData _categoryRingData() {
-    final totals = <String, _CategoryRingTotal>{};
-    for (final entry in widget.entries) {
-      if (entry.type == EntryType.transfer || entry.amount <= 0) continue;
-      final visual = categoryVisual(
-        entry.category,
+CategoryRingData categoryRingData(List<LedgerEntry> entries) {
+  final totals = <String, _CategoryRingTotal>{};
+  for (final entry in entries) {
+    if (entry.type == EntryType.transfer || entry.amount <= 0) continue;
+    final visual = categoryVisual(
+      entry.category,
+      type: entry.type,
+      iconKey: entry.categoryIconKey,
+    );
+    final key =
+        '${entry.type.index}:${entry.category}:${entry.categoryIconKey ?? ''}';
+    totals.update(
+      key,
+      (total) => total.copyWith(amount: total.amount + entry.amount),
+      ifAbsent: () => _CategoryRingTotal(
+        amount: entry.amount,
+        color: visual.color,
         type: entry.type,
-        iconKey: entry.categoryIconKey,
-      );
-      final key =
-          '${entry.type.index}:${entry.category}:${entry.categoryIconKey ?? ''}';
-      totals.update(
-        key,
-        (total) => total.copyWith(amount: total.amount + entry.amount),
-        ifAbsent: () => _CategoryRingTotal(
-          amount: entry.amount,
-          color: visual.color,
-          type: entry.type,
-        ),
-      );
-    }
-    if (totals.isEmpty) {
-      return const CategoryRingData(
-        income: [],
-        expense: [CategoryRingSegment(amount: 1, color: Color(0xFFE1AE28))],
-      );
-    }
-    final income = <CategoryRingSegment>[];
-    final expense = <CategoryRingSegment>[];
-    for (final total in totals.values) {
-      final segment = CategoryRingSegment(
-        amount: total.amount,
-        color: total.color,
-      );
-      if (total.type == EntryType.income) {
-        income.add(segment);
-      } else {
-        expense.add(segment);
-      }
-    }
-    income.sort((a, b) => b.amount.compareTo(a.amount));
-    expense.sort((a, b) => b.amount.compareTo(a.amount));
-    return CategoryRingData(income: income, expense: expense);
+      ),
+    );
   }
+  if (totals.isEmpty) {
+    return const CategoryRingData(
+      income: [],
+      expense: [CategoryRingSegment(amount: 1, color: Color(0xFFE1AE28))],
+    );
+  }
+  final income = <CategoryRingSegment>[];
+  final expense = <CategoryRingSegment>[];
+  for (final total in totals.values) {
+    final segment = CategoryRingSegment(
+      amount: total.amount,
+      color: total.color,
+    );
+    if (total.type == EntryType.income) {
+      income.add(segment);
+    } else {
+      expense.add(segment);
+    }
+  }
+  income.sort((a, b) => b.amount.compareTo(a.amount));
+  expense.sort((a, b) => b.amount.compareTo(a.amount));
+  return CategoryRingData(income: income, expense: expense);
 }
 
 class _CategoryRingTotal {
@@ -598,13 +612,13 @@ class SummaryAmount extends StatelessWidget {
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       children: [
-        Text(label, style: AppText.muted(context).copyWith(fontSize: 16)),
-        const SizedBox(height: 4),
+        Text(label, style: AppText.muted(context).copyWith(fontSize: 14)),
+        const SizedBox(height: 3),
         Text(
           formatCurrency(amount).replaceFirst('¥', ''),
           style: const TextStyle(
             color: AppColors.muted,
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -734,7 +748,7 @@ class TimelineEntryRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 74),
+        constraints: const BoxConstraints(minHeight: 66),
         child: Row(
           children: [
             Expanded(
@@ -746,7 +760,7 @@ class TimelineEntryRow extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: 86,
+              width: 76,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -756,9 +770,9 @@ class TimelineEntryRow extends StatelessWidget {
                     ),
                   ),
                   CircleAvatar(
-                    radius: 21,
+                    radius: 19,
                     backgroundColor: color,
-                    child: Icon(icon, color: Colors.white, size: 21),
+                    child: Icon(icon, color: Colors.white, size: 19),
                   ),
                 ],
               ),
@@ -798,7 +812,7 @@ class _EntryTitle extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.muted,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
         ),

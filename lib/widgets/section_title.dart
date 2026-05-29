@@ -9,9 +9,10 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(
-        context,
-      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+      ),
     );
   }
 }
